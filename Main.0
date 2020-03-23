@@ -1,0 +1,60 @@
+// Script creates tickets based on a view, and input from user on the type, start and end time, + additional settings based on the type of project or tickets selected.
+
+output.markdown("## Select view that contains all course records to make into project or only tickets");
+let sourceTable = base.getTable("Courses - REF");
+let sourceView = await input.viewAsync("Pick your view: ", sourceTable);
+let recordsSelect = await sourceView.selectRecordsAsync();
+let recordCount = recordsSelect.records.length;
+
+
+// Call project creation or Ticket Creation
+let projectOrTickets = await input.buttonsAsync('Create 1 Project and ' + recordCount + ' tickets? ', [
+    {label: 'Yes', variant: 'danger'},
+    {label: 'Just tickets'},
+]);
+
+// On yes, ask what type of project and call function for project
+if (projectOrTickets === 'Yes'){
+//Get single select field choices
+let projects = base.getTable("Projects - WRK");
+let projTypes = projects.getField("Type or Name - G");
+let typeChoices = projTypes.options.choices;
+
+// put field choices into an array
+let typeChoicesArray = [];
+var i;
+for (i = 0; i < typeChoices.length; i++){
+    typeChoicesArray[i] = typeChoices[i].name;
+};
+
+// Select a field type from the array then get id for value
+let projTypeSelectTemp = await input.buttonsAsync('Select a project type', typeChoicesArray);
+let projTypeSelect = typeChoices[typeChoicesArray.indexOf(projTypeSelectTemp)];
+
+
+//Define project field variables
+let lead = await input.recordAsync('Select the Lead for the project', base.getTable('Team - REF'));
+let start = await input.textAsync("Start Date (YYYY-MM-DD):");
+let startDate = new Date(start).toISOString();
+let end = await input.textAsync("End Date (YYYY-MM-DD):");
+let endDate = new Date(end).toISOString();
+
+await projects.createRecordAsync({
+    'Lead - G': [{id: lead.id}],
+    'Start Date - G': startDate,
+    'End Date - G': endDate,
+    'Type or Name - G': projTypeSelect,
+
+});
+
+if (projTypeSelectTemp === 'MVP Stack/Copy'){
+
+
+}
+}
+
+
+
+
+
+// On just tickets - ask what type of tickets and assign to variable (eventually pass this to ticket making function)
