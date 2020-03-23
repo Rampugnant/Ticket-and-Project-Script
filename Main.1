@@ -1,0 +1,80 @@
+// Script creates tickets based on a view, and input from user on the type, start and end time, + additional settings based on the type of project or tickets selected.
+
+output.markdown("## Select view that contains all course records to make into project or only tickets");
+let sourceTable = base.getTable("Courses - REF");
+let sourceView = await input.viewAsync("Pick your view: ", sourceTable);
+let recordsSelect = await sourceView.selectRecordsAsync();
+let recordCount = recordsSelect.records.length;
+
+
+//Get type of project as linked record
+let projectType = await input.recordAsync('Select the type of project/ticket', base.getTable('Type - REF'));
+
+// Call project creation or Ticket Creation
+let projectOrTickets = await input.buttonsAsync('Create 1 Project and ' + recordCount + ' tickets? ', [
+    {label: 'Yes', variant: 'danger'},
+    {label: 'Just tickets'},
+]);
+
+// On yes, ask what type of project and call function for project
+
+if (projectOrTickets === 'Yes'){
+let projects = base.getTable('Projects - WRK');
+
+
+
+//Define project field variables
+let lead = await input.recordAsync('Select the Lead for the project', base.getTable('Team - REF'));
+let start = await input.textAsync("Start Date (YYYY-MM-DD):");
+let startDate = new Date(start).toISOString();
+let end = await input.textAsync("End Date (YYYY-MM-DD):");
+let endDate = new Date(end).toISOString();
+
+//Create project
+let projectId = await projects.createRecordAsync({
+    'Lead - G': [{id: lead.id}],
+    'Start Date - G': startDate,
+    'End Date - G': endDate,
+    'Type or Name - G': [{id: projectType.id}],
+
+});
+
+output.markdown("Project Created!");
+output.table(projectId);
+
+switch (projectType.id){
+    case 'rec7sjA811y74xZiS':
+    output.markdown("# Stack/Copy Ticket Options")
+    let copy = await input.buttonsAsync('Request copy for all tickets?', [
+    {label: 'TRUE', variant: 'danger'},
+    {label: 'FALSE'},
+    ])
+     let stack = await input.buttonsAsync('Request stack for all tickets?', [
+    {label: 'TRUE', variant: 'danger'},
+    {label: 'FALSE'},
+    ]);
+    MakeTickets(projectId, stack, copy);
+    break;
+    default:
+    }
+}
+
+if (projectOrTickets === 'Just tickets'){
+    MakeTickets(0,0,0);
+}
+
+async function MakeTickets(proj, stack, copy){
+    let tickets = base.getTable('Tickets - WRK')
+    var i;
+    for (i = 0; i < recordCount; i++){
+       await tickets.createRecordAsync({
+            'Courses - G': [{id: recordsSelect.recordIds[i]}],
+            'Stack Requested - S/C': stack,
+            'Copy Requested - S/C': copy,
+            'Projects - G': [{id: proj.id}],
+            'Ticket Type - G': [{id: projectType.id}]
+        })
+    }
+    output.markdown("Process Complete!")
+}
+
